@@ -5,13 +5,32 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator typegraphql {
+  provider = "typegraphql-prisma"
+  output   = "../prisma/generated/type-graphql"
+  emitTranspiledCode = true
+  formatGeneratedCode = false
+}
+
 datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
-model Post {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-  title String
-  username String
+// model Post {
+//   id String @id @default(auto()) @map("_id") @db.ObjectId
+//   title String
+//   username String
+// }
+
+enum UserKind {
+  NORMAL
+  ADMIN
+}
+
+model User {
+  id    String  @default(cuid()) @map("_id") @id @db.ObjectId
+  email String  @unique
+  age   Int?
+  kind  UserKind
 }

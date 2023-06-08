@@ -1,55 +1,73 @@
-import { Prisma } from "./db.js";
+import { Prisma as prisma } from "./db.js";
 import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
 import { gql } from "graphql-tag";
+import { buildSubgraphSchema } from "@apollo/subgraph";
+import { Inject, Service } from "typedi";
+import {
+  GraphQLID,
+  GraphQLList,
+  GraphQLObjectType,
+  GraphQLString,
+} from "graphql";
+import {
+  Arg,
+  Args,
+  ArgsType,
+  Authorized,
+  buildSchema,
+  Ctx,
+  Field,
+  ID,
+  InputType,
+  Int,
+  Mutation,
+  ObjectType,
+  Query,
+  Resolver,
+} from "type-graphql";
+import { resolvers, User } from "./prisma/generated/type-graphql";
+import { PrismaClient, Prisma } from "@prisma/client";
 
 (async function () {
-  const typeDefs = gql`
-    type Post {
-      id: String
-      title: String
-      username: String
-    }
-
-    type Query {
-      getAllPosts: [Post]
-    }
-
-    type Mutation {
-      createPost(title: String, username: String): Post
-    }
-  `;
-
-  interface createPostInput {
-    title: string;
-    username: string;
-  }
-
-  const resolvers = {
-    Mutation: {
-      createPost: async (_parent: any, args: createPostInput) => {
-        const post = await Prisma.post.create({
-          data: {
-            title: args.title,
-            username: args.username,
-          },
-        });
-
-        return post;
-      },
-    },
-    Query: {
-      getAllPosts: async () => {
-        return await Prisma.post.findMany();
-      },
-    },
-  };
-
-  const server = new ApolloServer({
-    typeDefs,
+  const schema = await buildSchema({
     resolvers,
+    validate: false,
   });
 
+  @ObjectType()
+  class User {
+    @Field()
+    id: string;
+
+    @Field()
+    email: string;
+
+    @Field()
+    age?: number;
+
+    @Field()
+    kind: "NORMAL" | "ADMIN";
+  }
+
+  // interface MyContext {
+  //   prisma?: PrismaClient<
+  //     Prisma.PrismaClientOptions,
+  //     never,
+  //     Prisma.RejectOnNotFound | Prisma.RejectPerOperation
+  //   >;
+  // }
+
+  // const server = new ApolloServer<MyContext>({
+  //   schema, // from previous step
+  // });
+  // const { url } = await startStandaloneServer(server, {
+  //   context: async () => ({ prisma }),
+  //   listen: { port: 4000 },
+  // });
+  const server = new ApolloServer({
+    schema: buildSubgraphSchema({ typeDefs, resolvers }),
+  });
   const { url } = await startStandaloneServer(server, {
     listen: { port: 4000 },
   });
